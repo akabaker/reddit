@@ -209,7 +209,7 @@ service memcached start
 service postgresql start
 
 if [[ $(find /var/lib/pgsql/data/ -type f | wc -l) -eq 0 ]]; then
-    service postgresql initdb
+    postgresql-setup initdb
     service postgresql start
 fi
 
