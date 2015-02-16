@@ -208,7 +208,7 @@ service cassandra start
 service memcached start
 service postgresql start
 
-if [ ! -d /var/lib/pgsql/data ]; then
+if [[ $(find /var/lib/pgsql/data/ -type f | wc -l) -eq 0 ]]; then
     service postgresql initdb
     service postgresql start
 fi
