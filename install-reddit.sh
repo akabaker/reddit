@@ -76,11 +76,6 @@ fi
 # reddit ppa aren't built for anything but precise (12.04) right now, so
 # if you try and use this install script on another release you're gonna
 # have a bad time.
-source /etc/lsb-release
-if [ "$DISTRIB_ID" != "Ubuntu" -o "$DISTRIB_RELEASE" != "12.04" ]; then
-    echo "ERROR: Only Ubuntu 12.04 is supported."
-    exit 1
-fi
 
 if [[ "2000000" -gt $(awk '/MemTotal/{print $2}' /proc/meminfo) ]]; then
     LOW_MEM_PROMPT="reddit requires at least 2GB of memory to work properly, continue anyway? [y/n] "
@@ -97,95 +92,125 @@ fi
 set -x
 
 # aptitude configuration
-APTITUDE_OPTIONS="-y"
-export DEBIAN_FRONTEND=noninteractive
+YUM_OPTIONS="-y"
+#export DEBIAN_FRONTEND=noninteractive
 
 # run an aptitude update to make sure python-software-properties
 # dependencies are found
-apt-get update
+#apt-get update
 
 # add the reddit ppa for some custom packages
-apt-get install $APTITUDE_OPTIONS python-software-properties
-apt-add-repository -y ppa:reddit/ppa
+#apt-get install $YUM_OPTIONS python-software-properties
+#apt-add-repository -y ppa:reddit/ppa
 
 # pin the ppa -- packages present in the ppa will take precedence over
 # ones in other repositories (unless further pinning is done)
-cat <<HERE > /etc/apt/preferences.d/reddit
-Package: *
-Pin: release o=LP-PPA-reddit
-Pin-Priority: 600
-HERE
+#cat <<HERE > /etc/apt/preferences.d/reddit
+#Package: *
+#Pin: release o=LP-PPA-reddit
+#Pin-Priority: 600
+#HERE
 
 # add the datastax cassandra repos
-echo deb http://debian.datastax.com/community stable main > /etc/apt/sources.list.d/cassandra.sources.list
-curl -L https://debian.datastax.com/debian/repo_key | sudo apt-key add -
+#echo deb http://debian.datastax.com/community stable main > /etc/apt/sources.list.d/cassandra.sources.list
+#curl -L https://debian.datastax.com/debian/repo_key | sudo apt-key add -
 
 # grab the new ppas' package listings
-apt-get update
+#apt-get update
+
+cat <<YUMCONF > /etc/yum.repos.d/datastax.repo
+[datastax] 
+name = DataStax Repo for Apache Cassandra
+baseurl = http://rpm.datastax.com/community
+enabled = 1
+gpgcheck = 0
+YUMCONF
+
+yum clean all
 
 # install prerequisites
-cat <<PACKAGES | xargs apt-get install $APTITUDE_OPTIONS
-netcat-openbsd
-git-core
-
-python-dev
+#dsc12
+cat <<PACKAGES | xargs yum install $YUM_OPTIONS
+git
+cassandra12
+python-devel
 python-setuptools
-python-routes
 python-pylons
 python-boto
-python-tz
+python-tzlocal
 python-crypto
 python-babel
-cython
-python-sqlalchemy
-python-beautifulsoup
+Cython
+python-BeautifulSoup
 python-chardet
 python-psycopg2
-python-pycassa
 python-imaging
-python-pycaptcha
 python-amqplib
-python-pylibmc
-python-bcrypt
-python-snudown
-python-l2cs
 python-lxml
-python-zope.interface
-python-kazoo
-python-stripe
-python-tinycss2
-
 python-flask
-geoip-bin
-geoip-database
-python-geoip
-
+GeoIP
+geoip-geolite
+python-pygeoip
 nodejs
-node-less
-node-uglify
+nodejs-less
+nodejs-uglify-to-browserify
 gettext
 make
 optipng
 jpegoptim
-
 memcached
+postgresql-server
 postgresql
-postgresql-client
 rabbitmq-server
-cassandra=1.2.19
 haproxy
 nginx
 stunnel
-gunicorn
-sutro
-libpcre3-dev
+python-gunicorn
+pcre
+pcre-devel
+libffi-devel
+libffi
+nc
+svn
 PACKAGES
+
+svn co http://svn.navi.cx/misc/trunk/pycaptcha/ && cd pycaptcha && python setup.py install
+
+#PyCAPTCHA, easy-install
+#l2cs, easy install
+#simplecaptcha
+# pylibmc python-memcached
+cat <<PIPPACKAGES | xargs pip install
+Routes
+SQLAlchemy
+pycassa
+bcrypt
+zope.interface
+kazoo
+stripe
+tinycss2
+distribute==0.6.16
+PIPPACKAGES
+
+#git clone python-snudown #git, https://github.com/reddit/snudown
+#git clone sutro git, https://github.com/spladug/sutro.git
+git clone https://github.com/reddit/snudown && cd snudown && python setup.py install
+git clone https://github.com/spladug/sutro.git && cd sutro && python setup.py install
 
 ###############################################################################
 # Wait for all the services to be up
 ###############################################################################
 # cassandra doesn't auto-start after install
 service cassandra start
+service memcached start
+service postgresql start
+
+if [ ! -d /var/lib/pgsql/data ]; then
+    service postgresql initdb
+    service postgresql start
+fi
+
+service rabbitmq-server start
 
 # check each port for connectivity
 echo "Waiting for services to be available, see source for port meanings..."
