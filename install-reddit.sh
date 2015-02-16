@@ -134,7 +134,6 @@ yum clean all
 cat <<PACKAGES | xargs yum install $YUM_OPTIONS
 git
 python-devel
-python-setuptools
 python-pip
 python-memcached
 python-pylons
@@ -206,12 +205,11 @@ git clone https://github.com/spladug/sutro.git && cd sutro && python setup.py in
 # cassandra doesn't auto-start after install
 service cassandra start
 service memcached start
-service postgresql start
 
-if [[ $(find /var/lib/pgsql/data/ -type f | wc -l) -eq 0 ]]; then
-    postgresql-setup initdb
-    service postgresql start
-fi
+#if [[ $(find /var/lib/pgsql/data/ -type f | wc -l) -eq 0 ]]; then
+postgresql-setup initdb
+service postgresql start
+#fi
 
 service rabbitmq-server start
 
