@@ -130,11 +130,13 @@ yum clean all
 
 # install prerequisites
 #dsc12
+#cassandra12
 cat <<PACKAGES | xargs yum install $YUM_OPTIONS
 git
-cassandra12
 python-devel
 python-setuptools
+python-pip
+python-memcached
 python-pylons
 python-boto
 python-tzlocal
@@ -172,6 +174,7 @@ libffi-devel
 libffi
 nc
 svn
+python-memcached
 PACKAGES
 
 svn co http://svn.navi.cx/misc/trunk/pycaptcha/ && cd pycaptcha && python setup.py install
